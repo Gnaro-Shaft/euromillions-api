@@ -11,7 +11,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // URL FDJ officielle (à ajuster si nécessaire)
-const FDJ_ZIP_URL = "https://example.fdj.fr/euromillions.zip";
+const FDJ_ZIP_URL =
+  "https://www.sto.api.fdj.fr/anonymous/service-draw-info/v3/documentations/1a2b3c4d-9876-4562-b3fc-2c963f66afe6";
 const DOWNLOAD_DIR = path.join(__dirname, "data");
 const ZIP_PATH = path.join(DOWNLOAD_DIR, "euromillions.zip");
 let CSV_FILE_NAME = ""; // Sera déterminé dynamiquement
