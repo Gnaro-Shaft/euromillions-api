@@ -10,7 +10,8 @@ const cron = require("node-cron");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const FDJ_ZIP_URL = "https://example.fdj.fr/euromillions.zip"; // à modifier avec l'URL réelle
+const FDJ_ZIP_URL =
+  "https://www.sto.api.fdj.fr/anonymous/service-draw-info/v3/documentations/1a2b3c4d-9876-4562-b3fc-2c963f66afe6"; // à modifier avec l'URL réelle
 const DOWNLOAD_DIR = path.join(__dirname, "data");
 const ZIP_PATH = path.join(DOWNLOAD_DIR, "euromillions.zip");
 const FINAL_CSV_NAME = "euromillions.csv";
