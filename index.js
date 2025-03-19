@@ -10,14 +10,12 @@ const cron = require("node-cron");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// URL FDJ officielle (à ajuster si nécessaire)
-const FDJ_ZIP_URL =
-  "https://www.sto.api.fdj.fr/anonymous/service-draw-info/v3/documentations/1a2b3c4d-9876-4562-b3fc-2c963f66afe6";
+const FDJ_ZIP_URL = "https://example.fdj.fr/euromillions.zip"; // à modifier avec l'URL réelle
 const DOWNLOAD_DIR = path.join(__dirname, "data");
 const ZIP_PATH = path.join(DOWNLOAD_DIR, "euromillions.zip");
-let CSV_FILE_NAME = ""; // Sera déterminé dynamiquement
+const FINAL_CSV_NAME = "euromillions.csv";
+let CSV_FILE_NAME = FINAL_CSV_NAME;
 
-// Fonction pour télécharger et extraire le fichier
 async function downloadAndExtractCSV() {
   try {
     if (!fs.existsSync(DOWNLOAD_DIR)) fs.mkdirSync(DOWNLOAD_DIR);
@@ -42,31 +40,34 @@ async function downloadAndExtractCSV() {
       .promise();
 
     const files = fs.readdirSync(DOWNLOAD_DIR);
-    CSV_FILE_NAME = files.find((f) => f.endsWith(".csv"));
-    console.log(`[✓] CSV extrait : ${CSV_FILE_NAME}`);
+    const fichierCSV = files.find((f) => f.endsWith(".csv"));
+
+    if (fichierCSV && fichierCSV !== FINAL_CSV_NAME) {
+      const extractedPath = path.join(DOWNLOAD_DIR, fichierCSV);
+      const targetPath = path.join(DOWNLOAD_DIR, FINAL_CSV_NAME);
+      fs.renameSync(extractedPath, targetPath);
+      CSV_FILE_NAME = FINAL_CSV_NAME;
+    }
+
+    console.log(`[✓] Fichier CSV prêt : ${CSV_FILE_NAME}`);
   } catch (err) {
-    console.error("[!] Erreur lors du téléchargement ou extraction :", err);
+    console.error("[!] Erreur lors du téléchargement/extraction :", err);
   }
 }
 
-// Mise à jour automatique tous les jours à 3h du matin (modifiable)
 cron.schedule("0 3 * * *", () => {
   console.log("[⏰] Mise à jour automatique des données FDJ");
   downloadAndExtractCSV();
 });
 
-// Lancement initial au démarrage
 downloadAndExtractCSV();
 
-// Route publique pour servir le fichier CSV
 app.get("/euromillions.csv", (req, res) => {
-  if (
-    !CSV_FILE_NAME ||
-    !fs.existsSync(path.join(DOWNLOAD_DIR, CSV_FILE_NAME))
-  ) {
+  const filePath = path.join(DOWNLOAD_DIR, CSV_FILE_NAME);
+  if (!fs.existsSync(filePath)) {
     return res.status(404).send("Fichier CSV non disponible");
   }
-  res.sendFile(path.join(DOWNLOAD_DIR, CSV_FILE_NAME));
+  res.sendFile(filePath);
 });
 
 app.listen(PORT, () => {
