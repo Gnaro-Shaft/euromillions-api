@@ -6,7 +6,7 @@ const fs = require("fs");
 const axios = require("axios");
 const unzipper = require("unzipper");
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
 const dataFolder = path.join(__dirname, "data");
 if (!fs.existsSync(dataFolder)) fs.mkdirSync(dataFolder);
