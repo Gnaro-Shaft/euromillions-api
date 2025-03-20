@@ -9,7 +9,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // URL FDJ officielle (à ajuster si nécessaire)
-const FDJ_ZIP_URL = "https://example.fdj.fr/euromillions.zip";
+const FDJ_ZIP_URL =
+  "https://euromillions-api-kam1.onrender.comeuromillions.zip";
 const DOWNLOAD_DIR = path.join(__dirname, "data");
 const ZIP_PATH = path.join(DOWNLOAD_DIR, "euromillions.zip");
 let CSV_FILE_NAME = ""; // Sera déterminé dynamiquement
