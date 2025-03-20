@@ -43,6 +43,34 @@ async function telechargerEtExtraire(url, outputFile) {
   await telechargerEtExtraire(sources.eurodreams, "eurodreams");
 })();
 
+// ✔ Vérification existence avant envoi des fichiers
+app.get("/euromillions.csv", (req, res) => {
+  const filePath = path.join(dataFolder, "euromillions.csv");
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.status(404).send("Fichier EuroMillions non trouvé");
+  }
+});
+
+app.get("/loto.csv", (req, res) => {
+  const filePath = path.join(dataFolder, "loto.csv");
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.status(404).send("Fichier Loto non trouvé");
+  }
+});
+
+app.get("/eurodreams.csv", (req, res) => {
+  const filePath = path.join(dataFolder, "eurodreams.csv");
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.status(404).send("Fichier EuroDreams non trouvé");
+  }
+});
+
 // Routes Express
 app.get("/euromillions.csv", (req, res) =>
   res.sendFile(path.join(dataFolder, "euromillions.csv"))
