@@ -1,74 +1,71 @@
-// ✅ API Node.js avec routes sécurisées, vérification des fichiers et mise à jour déclenchée par CRON (/update-script)
-
 const express = require("express");
-const path = require("path");
-const fs = require("fs");
 const axios = require("axios");
+const fs = require("fs");
+const path = require("path");
 const unzipper = require("unzipper");
+const cron = require("node-cron");
+
 const app = express();
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 3000;
 
-const dataFolder = path.join(__dirname, "data");
-if (!fs.existsSync(dataFolder)) fs.mkdirSync(dataFolder);
+// URL FDJ officielle (à ajuster si nécessaire)
+const FDJ_ZIP_URL = "https://example.fdj.fr/euromillions.zip";
+const DOWNLOAD_DIR = path.join(__dirname, "data");
+const ZIP_PATH = path.join(DOWNLOAD_DIR, "euromillions.zip");
+let CSV_FILE_NAME = ""; // Sera déterminé dynamiquement
 
-const sources = {
-  euromillions:
-    "https://www.sto.api.fdj.fr/anonymous/service-draw-info/v3/documentations/1a2b3c4d-9876-4562-b3fc-2c963f66afe6",
-  loto: "https://www.sto.api.fdj.fr/anonymous/service-draw-info/v3/documentations/1a2b3c4d-9876-4562-b3fc-2c963f66afp6",
-  eurodreams:
-    "https://www.sto.api.fdj.fr/anonymous/service-draw-info/v3/documentations/1a2b3c4d-9876-4562-b3fc-2c963f66afa5",
-};
-
-async function telechargerEtExtraire(url, outputFile) {
+// Fonction pour télécharger et extraire le fichier
+async function downloadAndExtractCSV() {
   try {
-    const zipPath = path.join(dataFolder, outputFile + ".zip");
-    const response = await axios({ url, responseType: "stream" });
-    const writer = fs.createWriteStream(zipPath);
+    if (!fs.existsSync(DOWNLOAD_DIR)) fs.mkdirSync(DOWNLOAD_DIR);
+
+    const response = await axios({
+      method: "GET",
+      url: FDJ_ZIP_URL,
+      responseType: "stream",
+    });
+
+    const writer = fs.createWriteStream(ZIP_PATH);
     response.data.pipe(writer);
-    await new Promise((res, rej) => writer.on("finish", res).on("error", rej));
+
+    await new Promise((resolve, reject) => {
+      writer.on("finish", resolve);
+      writer.on("error", reject);
+    });
+
     await fs
-      .createReadStream(zipPath)
-      .pipe(unzipper.Extract({ path: dataFolder }));
-    console.log(`✅ ${outputFile} mis à jour.`);
+      .createReadStream(ZIP_PATH)
+      .pipe(unzipper.Extract({ path: DOWNLOAD_DIR }))
+      .promise();
+
+    const files = fs.readdirSync(DOWNLOAD_DIR);
+    CSV_FILE_NAME = files.find((f) => f.endsWith(".csv"));
+    console.log(`[✓] CSV extrait : ${CSV_FILE_NAME}`);
   } catch (err) {
-    console.error(`❌ Erreur téléchargement ${outputFile}:`, err);
+    console.error("[!] Erreur lors du téléchargement ou extraction :", err);
   }
 }
 
-// Route de mise à jour externe (CRON compatible)
-app.get("/update-script", async (req, res) => {
-  try {
-    await telechargerEtExtraire(sources.euromillions, "euromillions");
-    await telechargerEtExtraire(sources.loto, "loto");
-    await telechargerEtExtraire(sources.eurodreams, "eurodreams");
-    res.send("✅ Mise à jour automatique terminée.");
-  } catch (e) {
-    res.status(500).send("❌ Échec de mise à jour.");
-  }
+// Mise à jour automatique tous les jours à 3h du matin (modifiable)
+cron.schedule("0 3 * * *", () => {
+  console.log("[⏰] Mise à jour automatique des données FDJ");
+  downloadAndExtractCSV();
 });
 
-// Fichiers CSV - vérification d'existence
+// Lancement initial au démarrage
+downloadAndExtractCSV();
+
+// Route publique pour servir le fichier CSV
 app.get("/euromillions.csv", (req, res) => {
-  const filePath = path.join(dataFolder, "euromillions.csv");
-  fs.existsSync(filePath)
-    ? res.sendFile(filePath)
-    : res.status(404).send("Fichier EuroMillions non trouvé");
-});
-
-app.get("/loto.csv", (req, res) => {
-  const filePath = path.join(dataFolder, "loto.csv");
-  fs.existsSync(filePath)
-    ? res.sendFile(filePath)
-    : res.status(404).send("Fichier Loto non trouvé");
-});
-
-app.get("/eurodreams.csv", (req, res) => {
-  const filePath = path.join(dataFolder, "eurodreams.csv");
-  fs.existsSync(filePath)
-    ? res.sendFile(filePath)
-    : res.status(404).send("Fichier EuroDreams non trouvé");
+  if (
+    !CSV_FILE_NAME ||
+    !fs.existsSync(path.join(DOWNLOAD_DIR, CSV_FILE_NAME))
+  ) {
+    return res.status(404).send("Fichier CSV non disponible");
+  }
+  res.sendFile(path.join(DOWNLOAD_DIR, CSV_FILE_NAME));
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Serveur actif sur http://localhost:${PORT}`);
+  console.log(`✅ API Euromillions en ligne sur http://localhost:${PORT}`);
 });
