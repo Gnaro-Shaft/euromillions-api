@@ -1,4 +1,4 @@
-// ✅ API Node.js mise à jour avec 3 routes de fichiers : EuroMillions, Loto, EuroDreams
+// ✅ API Node.js avec routes sécurisées, vérification des fichiers et mise à jour déclenchée par CRON (/update-script)
 
 const express = require("express");
 const path = require("path");
@@ -6,12 +6,11 @@ const fs = require("fs");
 const axios = require("axios");
 const unzipper = require("unzipper");
 const app = express();
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 3000;
 
 const dataFolder = path.join(__dirname, "data");
 if (!fs.existsSync(dataFolder)) fs.mkdirSync(dataFolder);
 
-// URLs officielles à adapter selon les sources FDJ
 const sources = {
   euromillions:
     "https://www.sto.api.fdj.fr/anonymous/service-draw-info/v3/documentations/1a2b3c4d-9876-4562-b3fc-2c963f66afe6",
@@ -32,56 +31,44 @@ async function telechargerEtExtraire(url, outputFile) {
       .pipe(unzipper.Extract({ path: dataFolder }));
     console.log(`✅ ${outputFile} mis à jour.`);
   } catch (err) {
-    console.error(`❌ Erreur ${outputFile} :`, err);
+    console.error(`❌ Erreur téléchargement ${outputFile}:`, err);
   }
 }
 
-// Mise à jour automatique au démarrage
-(async () => {
-  await telechargerEtExtraire(sources.euromillions, "euromillions");
-  await telechargerEtExtraire(sources.loto, "loto");
-  await telechargerEtExtraire(sources.eurodreams, "eurodreams");
-})();
+// Route de mise à jour externe (CRON compatible)
+app.get("/update-script", async (req, res) => {
+  try {
+    await telechargerEtExtraire(sources.euromillions, "euromillions");
+    await telechargerEtExtraire(sources.loto, "loto");
+    await telechargerEtExtraire(sources.eurodreams, "eurodreams");
+    res.send("✅ Mise à jour automatique terminée.");
+  } catch (e) {
+    res.status(500).send("❌ Échec de mise à jour.");
+  }
+});
 
-// ✔ Vérification existence avant envoi des fichiers
+// Fichiers CSV - vérification d'existence
 app.get("/euromillions.csv", (req, res) => {
   const filePath = path.join(dataFolder, "euromillions.csv");
-  if (fs.existsSync(filePath)) {
-    res.sendFile(filePath);
-  } else {
-    res.status(404).send("Fichier EuroMillions non trouvé");
-  }
+  fs.existsSync(filePath)
+    ? res.sendFile(filePath)
+    : res.status(404).send("Fichier EuroMillions non trouvé");
 });
 
 app.get("/loto.csv", (req, res) => {
   const filePath = path.join(dataFolder, "loto.csv");
-  if (fs.existsSync(filePath)) {
-    res.sendFile(filePath);
-  } else {
-    res.status(404).send("Fichier Loto non trouvé");
-  }
+  fs.existsSync(filePath)
+    ? res.sendFile(filePath)
+    : res.status(404).send("Fichier Loto non trouvé");
 });
 
 app.get("/eurodreams.csv", (req, res) => {
   const filePath = path.join(dataFolder, "eurodreams.csv");
-  if (fs.existsSync(filePath)) {
-    res.sendFile(filePath);
-  } else {
-    res.status(404).send("Fichier EuroDreams non trouvé");
-  }
+  fs.existsSync(filePath)
+    ? res.sendFile(filePath)
+    : res.status(404).send("Fichier EuroDreams non trouvé");
 });
 
-// Routes Express
-app.get("/euromillions.csv", (req, res) =>
-  res.sendFile(path.join(dataFolder, "euromillions.csv"))
-);
-app.get("/loto.csv", (req, res) =>
-  res.sendFile(path.join(dataFolder, "loto.csv"))
-);
-app.get("/eurodreams.csv", (req, res) =>
-  res.sendFile(path.join(dataFolder, "eurodreams.csv"))
-);
-
-app.listen(PORT, () =>
-  console.log(`🚀 Serveur actif sur http://localhost:${PORT}`)
-);
+app.listen(PORT, () => {
+  console.log(`🚀 Serveur actif sur http://localhost:${PORT}`);
+});
