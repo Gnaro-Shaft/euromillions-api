@@ -1,0 +1,6 @@
+
+cron:
+  jobs:
+    - name: update-euromillions-loto-eurodreams
+      schedule: "0 6 * * *"
+      command: "curl https://euromillions-api.onrender.com/update-script"
